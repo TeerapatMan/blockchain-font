@@ -1,26 +1,56 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from 'react'
+import './App.css'
+import Web3 from 'web3'
+import Box from './Box.json'
 
 function App() {
+  const [number, setNumber] = useState('')
+  const [result, setResult] = useState(0)
+  const [contract, setContract] = useState()
+
+  const contractAccount = '0xE15156F76701AF0F5c4c89C41211A0b04751DF04'
+  const account = '0x4112AECAc19120e8012F88699B685AAE707eBe5e'
+
+  useEffect(() => {
+    const web3Context = new Web3(Web3.givenProvider)
+    const Contract = new web3Context.eth.Contract(Box.abi, contractAccount)
+    setContract(Contract)
+    Contract.methods.retrieve().call(function (error, result) {
+      setResult(result)
+    })
+  }, [])
+
+  const Submit = () => {
+    contract.methods
+      .store(Number(number))
+      .send({
+        from: account,
+      })
+      .then(() => {
+        contract.methods.retrieve().call(function (error, result) {
+          setResult(result)
+        })
+      })
+  }
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          Submit()
+        }}
+      >
+        <p>Value: {result}</p>
+        <input
+          type="text"
+          name="addNumber"
+          onChange={(event) => setNumber(event.target.value)}
+        />
+        <input type="submit" />
+      </form>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
