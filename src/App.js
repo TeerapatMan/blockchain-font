@@ -13,61 +13,61 @@ function App() {
   const [contract, setContract] = useState()
   const [accountMetamask, setAccountMetamask] = useState()
   const [balance, setBalance] = useState()
-  const [accountFrom, setAccountFrom] = useState()
   const [accountTo, setAccountTo] = useState()
   const [value, setValue] = useState()
   const [balanceCoin, setBalanceCoin] = useState()
   const [sleepCoin, setSleepCoin] = useState()
+  const [totalSupply, setTotalSupply] = useState()
 
-  const contractAccount = '0xe309E0911dd2301e962F77364D2E128Efe92bF86'
+  const contractAccount = '0x6102F01A1A46778Da6c9b1E4846766fB477d6e15'
 
-  const myToken = '0x4489B13424Ca5C6B14888f0212BB5431C1bB6Ec7'
+  const sleepAccount = '0xF484d2E4B1AfAa7a61C328CBC2e44E408b88e8Aa'
 
-  const sleepAccount = '0x0c603D4A0ddeD581a47907347939be371495925D'
+  const web3Context = new Web3(Web3.givenProvider)
+
+  const Contract = new web3Context.eth.Contract(Box.abi, contractAccount)
+
+  const SLEEP = new web3Context.eth.Contract(SLEEPToken.abi, sleepAccount)
+
+  web3Context.eth.getAccounts((error, res) => {
+    if (res[0] !== accountMetamask) {
+      setAccountMetamask(res[0])
+    }
+  })
+
+  window.ethereum.on('accountsChanged', async function (accounts) {
+    setAccountMetamask(accounts[0])
+  })
 
   useEffect(() => {
-    const web3Context = new Web3(Web3.givenProvider)
+    if (accountMetamask) {
+      web3Context.eth.getBalance(accountMetamask, (error, balance) => {
+        setBalance(balance)
+      })
 
-    new web3Context.eth.getAccounts((error, result) => {
-      if (error) {
-        console.log(error)
-      } else {
-        setAccountMetamask(result)
-        const SLEEP = new web3Context.eth.Contract(SLEEPToken.abi, myToken)
-        new web3Context.eth.getBalance(
-          result && result[0],
-          (error, balance) => {
-            setBalance(balance)
-          },
-        )
-        getBalance(result, SLEEP)
-        setSleepCoin(SLEEP)
-      }
-    })
+      SLEEP.methods.balanceOf(accountMetamask).call((err, res) => {
+        setBalanceCoin(res)
+      })
 
-    console.log({ web3Context })
+      SLEEP.methods.totalSupply().call((err, res) => {
+        setTotalSupply(res)
+      })
 
-    const Contract = new web3Context.eth.Contract(Box.abi, contractAccount)
+      Contract.methods.retrieve().call(function (error, result) {
+        setResult(result)
+      })
 
-    Contract.methods.retrieve().call(function (error, result) {
-      setResult(result)
-    })
+      setSleepCoin(SLEEP)
 
-    setContract(Contract)
-  }, [])
-
-  const getBalance = (result, SLEEP) => {
-    const balance = SLEEP?.methods.balanceOf(sleepAccount)
-    balance.call(function (error, result) {
-      setBalanceCoin(result)
-    })
-  }
+      setContract(Contract)
+    }
+  }, [accountMetamask])
 
   const Submit = () => {
     contract.methods
       .store(Number(number))
       .send({
-        from: accountMetamask && accountMetamask[0],
+        from: accountMetamask,
       })
       .then(() => {
         contract.methods.retrieve().call(function (error, result) {
@@ -76,21 +76,68 @@ function App() {
       })
   }
 
+  const TransferMatemark = () => {
+    const web3Context = new Web3(Web3.givenProvider)
+    web3Context.eth.sendTransaction({
+      from: accountMetamask,
+      to: accountTo,
+      value: value,
+    })
+  }
+
   const Transfer = () => {
-    console.log({ sleepCoin })
-    sleepCoin.methods
-      .transfer(accountMetamask && accountMetamask[0], value)
-      .send({
-        from: sleepAccount,
-      })
+    sleepCoin.methods.transfer(accountTo, value.toString()).send({
+      from: accountMetamask,
+    })
   }
 
   return (
     <div className="App">
       <div>
-        <p> Account : {accountMetamask && accountMetamask[0]}</p>
+        <p> Account : {accountMetamask}</p>
         <p> Balance : {balance} ETH</p>
       </div>
+      <p>--------------Transfer Metamask--------------</p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          TransferMatemark()
+        }}
+      >
+        <div style={{ display: 'inline' }}>
+          <div
+            style={{
+              display: 'flex',
+              whiteSpace: 'nowrap',
+              alignItems: 'center',
+            }}
+          >
+            to :
+            <input
+              type="text"
+              name="to"
+              onChange={(event) => setAccountTo(event.target.value)}
+              style={{ width: '100%', marginLeft: '10%' }}
+            />
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              whiteSpace: 'nowrap',
+              alignItems: 'center',
+            }}
+          >
+            value :
+            <input
+              type="text"
+              name="value"
+              onChange={(event) => setValue(event.target.value)}
+              style={{ width: '100%', marginLeft: 21 }}
+            />
+          </div>
+          <input type="submit" />
+        </div>
+      </form>
       <p>----------------------------------------</p>
       <form
         onSubmit={(e) => {
@@ -106,9 +153,10 @@ function App() {
         />
         <input type="submit" />
       </form>
-      <p>----------------------------------------</p>
+      <p>--------------------Transfer Coin Metamask--------------------</p>
       <div>
-        <p> Balance SLEEP Coin : {balanceCoin} GN</p>
+        <p>Total Supply SLEEP Coin : {totalSupply} GN</p>
+        <p> Balance : {balanceCoin} GN</p>
       </div>
       <form
         onSubmit={(e) => {
@@ -117,22 +165,6 @@ function App() {
         }}
       >
         <div style={{ display: 'inline' }}>
-          <div
-            style={{
-              display: 'flex',
-              whiteSpace: 'nowrap',
-              alignItems: 'center',
-            }}
-          >
-            from :
-            <input
-              type="text"
-              name="from"
-              value={accountMetamask && accountMetamask[0]}
-              onChange={(event) => setAccountFrom(event.target.value)}
-              style={{ width: '100%', marginLeft: 26 }}
-            />
-          </div>
           <div
             style={{
               display: 'flex',
